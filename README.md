@@ -1,280 +1,273 @@
-# ⚡ 8-Hour Agile Sprint Plan
+```markdown
+# crewai-zerodb
 
-**Product:** `crewai-zerodb`
-**Sprint Type:** Single-day “Hardening MVP”
-**Methodology:** XP-style, TDD-lean, vertical slices
-**Definition of Done:** Sales Crew demo runs end-to-end with memory + RAG + tracing
+**Persistent Memory, RAG, and Observability for CrewAI — powered by ZeroDB**
 
----
+`crewai-zerodb` is an open-source integration that connects the **CrewAI Agent Framework (OSS)** with **ZeroDB** via the official **AINative Python SDK**.
 
-## 🧭 Sprint Strategy (Read This First)
+It enables:
+- 🧠 **Durable agent memory** (preferences, objections, next steps)
+- 📚 **ZeroDB-backed RAG** across sales knowledge, cases, and history
+- 🔍 **Run / task / tool observability** with replay-ready artifacts
+- 🤝 **Multi-agent continuity** across independent runs
 
-### What we WILL build
-
-✅ Knowledge Tool (RAG)
-✅ Memory Store (curated, tagged)
-✅ Tracer (run/task/tool)
-✅ Sales Crew demo (research → outreach → follow-up)
-✅ README + example
-
-### What we WILL NOT build
-
-❌ UI
-❌ CRM sync
-❌ Full eval framework
-❌ Raw chat persistence
+The integration is opinionated, minimal, and hackathon-ready.
 
 ---
 
-## ⏱️ Hour-by-Hour Plan
+## Why This Exists
+
+CrewAI is excellent at orchestrating agents, but in OSS usage:
+
+- Memory is ephemeral  
+- RAG wiring is ad-hoc  
+- Debugging agent behavior is difficult  
+
+ZeroDB provides durable agent state — not just vectors.
+
+This repo makes ZeroDB feel **native** to CrewAI.
 
 ---
 
-## **Hour 0–0.5 — Sprint Setup & Lock Scope (30 min)**
+## Features (v1)
 
-**Goals**
+### ✅ ZeroDB Knowledge Tool (RAG)
+- Stage-aware retrieval (research / outreach / follow-up)
+- Deterministic namespace + filter recipes
+- Citation-friendly results
 
-* Lock sprint scope
-* Prep environment
-* Avoid mid-sprint derailment
+### ✅ ZeroDB Memory Store
+- Curated long-term memory (not raw chat)
+- Facet-based recall (preferences, objections, next steps)
+- Semantic recall with post-filtering
 
-**Tasks**
+### ✅ ZeroDB Tracer
+- Run start / end
+- Task summaries
+- Tool-call summaries (no noisy raw logs)
+- Replay-ready artifacts stored in ZeroDB
 
-* Create repo (or branch)
-* Install deps:
-
-  * `ainative`
-  * `crewai`
-  * `pydantic`
-* Add `.env.example`
-* Copy in:
-
-  * Namespace map
-  * Pydantic models (already done)
-
-**Exit Criteria**
-
-* `pip install -e .` works
-* Tests can run (even if empty)
+### ✅ Sales Crew Demo
+- Research → Outreach → Follow-up
+- Memory persists across runs
+- Follow-ups adapt based on past context
 
 ---
 
-## **Hour 0.5–1.5 — Core Infrastructure (60 min)**
+## Non-Goals (Explicit)
 
-### Vertical Slice: “Nothing breaks later”
-
-**Tasks**
-
-1. Implement `config.py`
-
-   * Load API key
-   * Resolve or create ZeroDB Project
-2. Implement namespace registry
-3. Wire SDK client creation
-
-**Acceptance Criteria**
-
-* Config object instantiates cleanly
-* Project ID resolved deterministically
-* No network calls outside SDK
-
-**Artifacts**
-
-* `config.py`
-* `client.py`
+- ❌ CrewAI Cloud
+- ❌ UI / Dashboard
+- ❌ Raw chat persistence by default
+- ❌ CRM sync (future extension)
 
 ---
 
-## **Hour 1.5–3.0 — Knowledge Tool (RAG) (90 min)**
+## Architecture Overview
 
-### Vertical Slice: “Agent can retrieve context”
+```
 
-**Tasks**
+CrewAI
+├─ Agents
+├─ Tasks
+├─ Tools
+└─ Callbacks
+↓
+crewai-zerodb
+├─ KnowledgeTool (RAG)
+├─ MemoryStore
+└─ Tracer
+↓
+AINative Python SDK
+↓
+ZeroDB
 
-1. Implement `ZeroDBKnowledgeTool`
-2. Implement filter builders
-3. Implement **stage-aware search plans**
-4. Merge + dedupe results
-
-**Scope Control**
-
-* Top-K fixed
-* No reranking
-* No hybrid search
-
-**Acceptance Criteria**
-
-* Research stage pulls:
-
-  * playbooks
-  * cases
-  * account notes
-* Outreach stage pulls lead + outreach history
-* Follow-up stage pulls objections + traces
-
-**Artifacts**
-
-* `knowledge_tool.py`
-* Unit tests for filter recipes
+````
 
 ---
 
-## **Hour 3.0–4.5 — Memory Store (90 min)**
+## ZeroDB Namespace Map (Authoritative)
 
-### Vertical Slice: “Agent remembers things across runs”
-
-**Tasks**
-
-1. Implement `ZeroDBMemoryStore`
-2. Implement memory tag builders
-3. Implement:
-
-   * `remember()`
-   * `recall_by_facets()`
-   * `recall_semantic()`
-
-**Strict Rules**
-
-* No raw chat
-* Memory = high-signal facts only
-
-**Acceptance Criteria**
-
-* Can store:
-
-  * preferences
-  * objections
-  * next steps
-* Follow-up agent recalls prior run memory
-
-**Artifacts**
-
-* `memory_store.py`
-* Memory tests
+| Purpose | Namespace |
+|------|-----------|
+| Sales Playbooks | `sales_playbooks` |
+| Case Studies | `sales_cases` |
+| Account Notes | `accounts` |
+| Lead Notes | `leads` |
+| Outreach History | `outreach_history` |
+| Runs & Traces | `crew_runs` |
 
 ---
 
-## **Hour 4.5–6.0 — Tracer (Observability) (90 min)**
+## Installation
 
-### Vertical Slice: “I can debug what just happened”
+```bash
+pip install crewai-zerodb
+````
 
-**Tasks**
-
-1. Implement `ZeroDBTracer`
-2. Capture:
-
-   * run start/end
-   * task summaries
-   * tool calls (summary only)
-3. Write artifacts to `crew_runs`
-
-**Minimalism Rule**
-
-* One vector per event
-* Summaries only
-* No token-level logs
-
-**Acceptance Criteria**
-
-* Run artifacts visible in ZeroDB
-* Can retrieve traces by run_id
-* Tool failures are captured
-
-**Artifacts**
-
-* `tracer.py`
-* Trace metadata schemas
+> Requires **Python 3.10+**
 
 ---
 
-## **Hour 6.0–7.0 — Sales Crew Demo (60 min)**
+## Configuration
 
-### Vertical Slice: “Judge-wow path”
+Create a `.env` file or export environment variables:
 
-**Tasks**
+```bash
+export AINATIVE_API_KEY=your_api_key_here
+export AINATIVE_ORG_ID=optional_org_id
+export ZERODB_PROJECT_ID=optional_existing_project
+```
 
-1. Build `examples/sales_crew.py`
-2. Define agents:
-
-   * ResearchAgent
-   * OutreachAgent
-   * FollowUpAgent
-3. Wire:
-
-   * KnowledgeTool
-   * MemoryStore
-   * Tracer
-
-**Demo Script**
-
-* Run #1: Research + Outreach
-* Run #2: Follow-up (memory recalled)
-
-**Acceptance Criteria**
-
-* Second run references first run context
-* Outreach adapts based on memory
-* No crashes
+If `ZERODB_PROJECT_ID` is not provided, the integration will create or resolve one automatically.
 
 ---
 
-## **Hour 7.0–8.0 — Hardening & Polish (60 min)**
+## Minimal Usage Example
 
-### Vertical Slice: “Ship it”
+```python
+from crewai_zerodb import (
+    ZeroDBKnowledgeTool,
+    ZeroDBMemoryStore,
+    ZeroDBTracer,
+)
+```
 
-**Tasks**
-
-1. Write README:
-
-   * Install
-   * Env setup
-   * Demo run
-2. Add guardrails:
-
-   * Better errors
-   * Clear logs
-3. Final pass:
-
-   * Remove dead code
-   * Format
-   * Quick smoke test
-
-**Acceptance Criteria**
-
-* New user can run demo in <10 minutes
-* Repo looks intentional
-* No TODOs in core path
+These components are designed to be **plug-and-play** with CrewAI agents and callbacks.
 
 ---
 
-## 🧪 Testing Strategy (Light but Real)
+## Sales Crew Demo (End-to-End)
 
-* Unit tests:
+### 1. Research Run
+
+* Retrieves playbooks + cases + account notes
+* Stores:
+
+  * Research summary (memory)
+  * Account notes (vectors)
+
+### 2. Outreach Run
+
+* Recalls lead preferences + past context
+* Generates outreach drafts
+* Stores:
+
+  * Outreach artifacts
+  * Decision rationale
+
+### 3. Follow-Up Run
+
+* Recalls objections + outreach history
+* Adapts follow-up strategy
+* Stores:
+
+  * Next steps
+  * Updated status
+
+👉 **Second run references memory from the first run automatically**
+
+---
+
+## Example
+
+```bash
+python examples/sales_crew.py
+```
+
+Run it twice to see memory persistence in action.
+
+---
+
+## Memory Philosophy (Important)
+
+This integration is **intentionally opinionated**:
+
+* ✅ Store **facts, decisions, summaries**
+* ❌ Do NOT store raw chat by default
+* ❌ Do NOT store token-level logs
+
+Memory is treated as **high-signal state**, not exhaust.
+
+---
+
+## Project Structure
+
+```
+crewai_zerodb/
+├── config.py           # env + project resolution
+├── models.py           # Pydantic schemas (metadata, filters, tags)
+├── knowledge_tool.py   # ZeroDB RAG tool
+├── memory_store.py     # Durable agent memory
+├── tracer.py           # Run / task / tool observability
+├── utils/
+│   └── filters.py
+examples/
+├── sales_crew.py       # Research → Outreach → Follow-up demo
+tests/
+└── ...
+```
+
+---
+
+## Testing
+
+Lightweight but real:
+
+* Unit tests for:
 
   * Filter builders
-  * Pydantic validation
-* Manual test:
+  * Pydantic schema validation
+* Manual verification:
 
-  * Sales demo twice in a row
-* No full CI needed for sprint
-
----
-
-## 📦 Final Deliverables (End of Hour 8)
-
-✅ OSS-ready Python package
-✅ ZeroDB-aligned data model
-✅ Deterministic RAG + memory
-✅ Observable CrewAI runs
-✅ Sales demo that *actually remembers things*
+  * Run the sales demo twice
+  * Confirm memory recall + traces in ZeroDB
 
 ---
 
-## 🚀 If You Finish Early (Stretch, Optional)
+## OSS & Contributions
 
-* Add memory summarization at task end
-* Add CLI runner
-* Add “replay run” helper
+* License: **MIT** (or Apache 2.0 if preferred)
+* PRs welcome
+* Please keep:
+
+  * Stories ≤ size 3
+  * Changes aligned with ZeroDB primitives
+  * No custom clients (SDK only)
 
 ---
 
+## Roadmap (Post-v1)
+
+* Agent handoff memory
+* Eval hooks (win/loss, task success)
+* Replay helpers
+* CRM adapters
+* CLI runner
+
+---
+
+## Maintainers
+
+Built by **AINative Studio**
+Powered by **ZeroDB**
+
+---
+
+## TL;DR
+
+If you’re building **serious CrewAI agents** and want them to:
+
+* remember past work
+* retrieve real knowledge
+* be debuggable and replayable
+
+👉 this repo is your missing persistence layer.
+
+Happy building 🚀
+
+```
+
+---
+
+```
